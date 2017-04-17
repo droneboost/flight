@@ -222,7 +222,7 @@ void PushbroomStereo::ProcessImages(InputArray _leftImage, InputArray _rightImag
 
     cv::vector<Point3f> pointVector3dArray[NUM_THREADS+1];
     cv::vector<Point3i> pointVector2dArray[NUM_THREADS+1];
-    cv::vector<uchar> pointColorsArray[NUM_THREADS+1];
+    cv::vector<uchar>   pointColorsArray[NUM_THREADS+1];
 
     //cout << "[main] firing worker threads..." << endl;
 

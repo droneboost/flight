@@ -79,11 +79,13 @@ void RecordingManager::BeginNewRecording() {
     // reset the number of frames we've recorded
     rec_num_frames_ = 0;
 
-    recording_on_ = true;
+    // recording_on_ = true;
+    recording_on_ = false;
 }
 
 void RecordingManager::AddFrames(Mat image_left, Mat image_right) {
 
+    rec_num_frames_ ++;
     if (recording_on_) {
         ringbufferL[rec_num_frames_%RINGBUFFER_SIZE] = image_left;
         ringbufferR[rec_num_frames_%RINGBUFFER_SIZE] = image_right;
@@ -94,6 +96,9 @@ void RecordingManager::AddFrames(Mat image_left, Mat image_right) {
 
 void RecordingManager::FlushBufferToDisk() {
 
+   if (!recording_on_) {
+       return;
+   }
 
     printf("Writing video...\n");
 

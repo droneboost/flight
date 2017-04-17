@@ -10,6 +10,7 @@
  */
 
 #include "pushbroom-stereo-main.hpp"
+#include "maker_binocular.h"
 
 bool show_display; // set to true to show opencv images on screen
 int show_display_wait = 1; // milli seconds to wait between frames when showing display
@@ -60,13 +61,18 @@ bool quiet_mode = false;
 double timer_sum = 0;
 int timer_count = 0;
 
+/*
 dc1394_t        *d;
 dc1394camera_t  *camera;
 
 dc1394_t        *d2;
 dc1394camera_t  *camera2;
+*/
 
 OpenCvStereoConfig stereoConfig;
+
+#define TRACE_HERE() printf("@%s, F:%s, L:%d\n", __FILE__, __func__, __LINE__)
+makerbinocular* binocular = NULL;
 
 /**
  * Cleanly handles and exit from a command-line
@@ -80,10 +86,11 @@ void control_c_handler(int s)
     cout << endl << "exiting via ctrl-c" << endl;
 
     if (recording_manager.UsingLiveCameras()) {
-
+/*
         StopCapture(d, camera);
         StopCapture(d2, camera2);
-
+*/
+        delete binocular;
         cout << "\tpress ctrl+\\ to quit while writing video." << endl;
         recording_manager.FlushBufferToDisk();
     }
@@ -141,8 +148,8 @@ void lcm_stereo_control_handler(const lcm_recv_buf_t *rbuf, const char* channel,
 
 int main(int argc, char *argv[])
 {
+    TRACE_HERE();
     // get input arguments
-
     string configFile = "";
     string video_file_left = "", video_file_right = "", video_directory = "";
     int starting_frame_number = 0;
@@ -152,7 +159,7 @@ int main(int argc, char *argv[])
     int last_frame_number = -1;
 
     int last_playback_frame_number = -2;
-
+    TRACE_HERE();
     ConciseArgs parser(argc, argv);
     parser.add(configFile, "c", "config", "Configuration file containing camera GUIDs, etc.", true);
     parser.add(show_display, "d", "show-dispaly", "Enable for visual debugging display. Will reduce framerate significantly.");
@@ -200,11 +207,12 @@ int main(int argc, char *argv[])
     }
 
     recording_manager.Init(stereoConfig);
-
+    TRACE_HERE();
     // attempt to load video files / directories
     if (video_file_left.length() > 0) {
         if (recording_manager.LoadVideoFiles(video_file_left, video_file_right) != true) {
             // don't have videos, bail out.
+            TRACE_HERE();
             return -1;
         }
     }
@@ -212,14 +220,14 @@ int main(int argc, char *argv[])
     if (video_directory.length() > 0) {
         if (recording_manager.SetPlaybackVideoDirectory(video_directory) != true) {
             // bail
+            TRACE_HERE();
             return -1;
         }
     }
 
+    TRACE_HERE();
     recording_manager.SetQuietMode(quiet_mode);
     recording_manager.SetPlaybackFrameNumber(starting_frame_number);
-
-
 
     uint64 guid = stereoConfig.guidLeft;
     uint64 guid2 = stereoConfig.guidRight;
@@ -228,11 +236,8 @@ int main(int argc, char *argv[])
     lcm_t * lcm;
     lcm = lcm_create (stereoConfig.lcmUrl.c_str());
 
-
     unsigned long elapsed;
-
     Hud hud;
-
 
     // --- setup control-c handling ---
     struct sigaction sigIntHandler;
@@ -244,15 +249,18 @@ int main(int argc, char *argv[])
     sigaction(SIGINT, &sigIntHandler, NULL);
     // --- end ctrl-c handling code ---
 
+/*
     dc1394error_t   err;
     dc1394error_t   err2;
-
+*/
 
     // tell opencv to use only one core so that we can manage our
     // own threading without a fight
     setNumThreads(1);
-
+    TRACE_HERE();
     if (recording_manager.UsingLiveCameras()) {
+        binocular = new makerbinocular();
+/* 
         d = dc1394_new ();
         if (!d)
             cerr << "Could not create dc1394 context" << endl;
@@ -289,8 +297,9 @@ int main(int argc, char *argv[])
         DC1394_ERR_CLN_RTN(err2, cleanup_and_exit(camera2), "Could not start camera iso transmission for camera number 2");
 
         InitBrightnessSettings(camera, camera2, enable_gamma);
+*/
     }
-
+    TRACE_HERE();
     if (show_display) {
 
         namedWindow("Input", CV_WINDOW_AUTOSIZE | CV_WINDOW_KEEPRATIO);
@@ -367,7 +376,7 @@ int main(int argc, char *argv[])
         cerr << "Error: failed to read calibration files. Quitting." << endl;
         return -1;
     }
-
+    TRACE_HERE();
     int inf_disparity_tester, disparity_tester;
     disparity_tester = GetDisparityForDistance(10, stereoCalibration, &inf_disparity_tester);
 
@@ -405,34 +414,58 @@ int main(int argc, char *argv[])
     state.show_display = show_display;
 
     state.lastValidPixelRow = stereoConfig.lastValidPixelRow;
+    TRACE_HERE();
+    cv::Size size(376, 240);
+    cv::Mat matL_Raw(480, 640, CV_8UC1, cv::Scalar(0));
+    cv::Mat matR_Raw(480, 640, CV_8UC1, cv::Scalar(0));
 
     Mat matL, matR;
     bool quit = false;
 
     if (recording_manager.UsingLiveCameras()) {
+/*
         matL = GetFrameFormat7(camera);
         matR = GetFrameFormat7(camera2);
+*/  
+        TRACE_HERE();
+        // escape first 10 frames
+        while (binocular->new_frame_arrived() == false) {
+            for (int i=0; i < 10; i++) {
+                binocular->get_frame(matL_Raw, matR_Raw);
+            }
+        }
+        cv::resize(matL_Raw, matL, size);
+        cv::resize(matR_Raw, matR, size);
 
         if (recording_manager.InitRecording(matL, matR) != true) {
             // failed to init recording, things are going bad.  bail.
+            TRACE_HERE();
             return -1;
         }
 
         // before we start, turn the cameras on and set the brightness and exposure
-        MatchBrightnessSettings(camera, camera2, true, force_brightness, force_exposure);
+        /* MatchBrightnessSettings(camera, camera2, true, force_brightness, force_exposure); */
 
         // grab a few frames and send them over LCM for the user
         // to verify that everything is working
         if (!show_display && !publish_all_images) {
             printf("Sending init images over LCM... ");
             fflush(stdout);
+            TRACE_HERE();
 
             for (int i = 0; i < 5; i++) {
-
+/*
                 matL = GetFrameFormat7(camera);
                 SendImageOverLcm(lcm, "stereo_image_left", matL, 50);
 
                 matR = GetFrameFormat7(camera2);
+                SendImageOverLcm(lcm, "stereo_image_right", matR, 50);
+*/
+                binocular->get_frame(matL_Raw, matR_Raw);
+                cv::resize(matL_Raw, matL, size);
+                cv::resize(matR_Raw, matR, size);
+
+                SendImageOverLcm(lcm, "stereo_image_left", matL, 50);
                 SendImageOverLcm(lcm, "stereo_image_right", matR, 50);
 
                 // don't send these too fast, otherwise we'll flood the ethernet link
@@ -441,7 +474,7 @@ int main(int argc, char *argv[])
                 // wait one second
                 printf(".");
                 fflush(stdout);
-
+                TRACE_HERE();
                 sleep(1);
             }
             printf(" done.\n");
@@ -465,25 +498,31 @@ int main(int argc, char *argv[])
             // match brightness every 10 frames instead
             if (numFrames % MATCH_BRIGHTNESS_EVERY_N_FRAMES == 0)
             {
-                MatchBrightnessSettings(camera, camera2);
+                /* MatchBrightnessSettings(camera, camera2); */
             }
 
             // capture images from the cameras
+/*
             matL = GetFrameFormat7(camera);
             matR = GetFrameFormat7(camera2);
-
+*/
+            binocular->get_frame(matL_Raw, matR_Raw);
+            cv::resize(matL_Raw, matL, size);
+            cv::resize(matR_Raw, matR, size);
+//            TRACE_HERE();
             // record video
             recording_manager.AddFrames(matL, matR);
 
 
         } else {
             // using a video file -- get the next frame
+            TRACE_HERE();
             recording_manager.GetFrames(matL, matR);
         }
 
         cv::vector<Point3f> pointVector3d;
-        cv::vector<uchar> pointColors;
-        cv::vector<Point3i> pointVector2d; // for display
+        cv::vector<uchar>   pointColors;
+        cv::vector<Point3i> pointVector2d;     // for display
         cv::vector<Point3i> pointVector2d_inf; // for display
 
         // do the main stereo processing
@@ -493,7 +532,7 @@ int main(int argc, char *argv[])
             double before = now.tv_usec + now.tv_sec * 1000 * 1000;
 
             pushbroom_stereo.ProcessImages(matL, matR, &pointVector3d, &pointColors, &pointVector2d, state);
-
+//            TRACE_HERE();
             gettimeofday( &now, NULL );
             double after = now.tv_usec + now.tv_sec * 1000 * 1000;
 
@@ -505,15 +544,12 @@ int main(int argc, char *argv[])
         // build an LCM message for the stereo data
         lcmt_stereo msg;
 
-
         if (recording_manager.UsingLiveCameras() || stereo_lcm_msg == NULL) {
             msg.timestamp = getTimestampNow();
         } else {
             // if we are replaying videos, preserve the timestamp of the original video
             msg.timestamp = stereo_lcm_msg->timestamp;
-
         }
-
 
         msg.number_of_points = (int)pointVector3d.size();
 
@@ -708,35 +744,35 @@ int main(int argc, char *argv[])
 
                 case 'm':
                     if (recording_manager.UsingLiveCameras()) {
-                        MatchBrightnessSettings(camera, camera2, true, force_brightness, force_exposure);
+                        /* MatchBrightnessSettings(camera, camera2, true, force_brightness, force_exposure); */
                     }
                     break;
 
                 case '1':
                     force_brightness --;
                     if (recording_manager.UsingLiveCameras()) {
-                        MatchBrightnessSettings(camera, camera2, true, force_brightness, force_exposure);
+                        /* MatchBrightnessSettings(camera, camera2, true, force_brightness, force_exposure); */
                     }
                     break;
 
                 case '2':
                     force_brightness ++;
                     if (recording_manager.UsingLiveCameras()) {
-                        MatchBrightnessSettings(camera, camera2, true, force_brightness, force_exposure);
+                        /* MatchBrightnessSettings(camera, camera2, true, force_brightness, force_exposure); */
                     }
                     break;
 
                 case '3':
                     force_exposure --;
                     if (recording_manager.UsingLiveCameras()) {
-                        MatchBrightnessSettings(camera, camera2, true, force_brightness, force_exposure);
+                        /* MatchBrightnessSettings(camera, camera2, true, force_brightness, force_exposure); */
                     }
                     break;
 
                 case '4':
                     force_exposure ++;
                     if (recording_manager.UsingLiveCameras()) {
-                        MatchBrightnessSettings(camera, camera2, true, force_brightness, force_exposure);
+                        /* MatchBrightnessSettings(camera, camera2, true, force_brightness, force_exposure); */
                     }
                     break;
 
@@ -906,8 +942,11 @@ int main(int argc, char *argv[])
 
     // close camera
     if (recording_manager.UsingLiveCameras()) {
+/*
         StopCapture(d, camera);
         StopCapture(d2, camera2);
+*/
+        delete binocular;
     }
 
     return 0;

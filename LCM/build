@@ -28,6 +28,7 @@ echo "    Building LCM types     "
 echo "---------------------------"
 for FILE in `ls types/*.lcm`
 do
+    lcm-gen -x $FILE
     lcm-gen -j $FILE
     lcm-gen -p $FILE
 

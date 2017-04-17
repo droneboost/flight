@@ -50,10 +50,11 @@ GTEST_LIB=../../externals/gtest/libgtest.a ../../externals/gtest/libgtest_main.a
 
 CXXFLAGS=-std=c++0x
 
-CPPFLAGS=-c -Wall -O3 -fopenmp -I/usr/local/include/opencv2 `PKG_CONFIG_PATH=$(PKG_CONFIG_PATH_PRONTO) pkg-config --cflags $(REQUIRES) $(REQUIRES_EXTRA)` -I$(MAVCONN_INCLUDE) -I$(LOCAL_MAVLINK) -I$(MAVLINK_INCLUDE) -I$(FIREFLY_MV_UTILS) -I$(DC1394) -I$(GTEST_INCLUDE) -I$(SMC_INCLUDE)
+CPPFLAGS=-c -Wall -O3 -fopenmp -I/usr/include/opencv2 -I/usr/include/glib-2.0 `PKG_CONFIG_PATH=$(PKG_CONFIG_PATH_PRONTO) pkg-config --cflags $(REQUIRES) $(REQUIRES_EXTRA)` -I$(MAVCONN_INCLUDE) -I$(LOCAL_MAVLINK) -I$(MAVLINK_INCLUDE) -I$(FIREFLY_MV_UTILS) -I$(DC1394) -I$(GTEST_INCLUDE) -I$(SMC_INCLUDE)
 
-LDPOSTFLAGS = -fopenmp `PKG_CONFIG_PATH=$(PKG_CONFIG_PATH_PRONTO) pkg-config --libs $(REQUIRES) $(REQUIRES_EXTRA)` -lgthread-2.0 -lboost_system -lboost_filesystem $(LCMLIB) $(MAVCONN) $(FIREFLY_MV_UTILS_LIB) $(GTEST_LIB) $(OCTOMAP_LIB) $(LCM_PRONTO_LIB) -L $(DC1394_LIB) -ldc1394
+LDPOSTFLAGS = -fopenmp `PKG_CONFIG_PATH=$(PKG_CONFIG_PATH_PRONTO) pkg-config --libs $(REQUIRES) $(REQUIRES_EXTRA)` -lgthread-2.0 -lboost_system -lboost_filesystem -lusb-1.0 $(LCMLIB) $(MAVCONN) $(FIREFLY_MV_UTILS_LIB) $(GTEST_LIB) $(OCTOMAP_LIB) $(LCM_PRONTO_LIB) -L $(DC1394_LIB) -ldc1394
 
 
 # include a standard makefile that uses these variables and builds everything
 include ../../externals/edam.mk
+

@@ -64,7 +64,7 @@ extern "C"
     #include <stdlib.h>
     #include <inttypes.h>
 
-    #include <dc1394/dc1394.h>
+    /*#include <dc1394/dc1394.h>*/
 
     #include "camera.h"
     #include "utils.h"

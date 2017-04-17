@@ -17,6 +17,7 @@
  */
 Mat GetFrameFormat7(dc1394camera_t *camera)
 {
+/*
     // get a frame
     dc1394error_t err;
     dc1394video_frame_t *frame;
@@ -49,7 +50,8 @@ Mat GetFrameFormat7(dc1394camera_t *camera)
     // release the buffer
     err = dc1394_capture_enqueue(camera, frame);
     DC1394_WRN(err,"releasing buffer");
-
+*/
+    Mat matOut;
     return matOut;
 }
 
@@ -60,6 +62,7 @@ Mat GetFrameFormat7(dc1394camera_t *camera)
  * @param camera the camera object
  */
 void FlushCameraBuffer(dc1394camera_t *camera) {
+/*
     dc1394error_t err;
     dc1394video_frame_t *frame;
 
@@ -78,6 +81,7 @@ void FlushCameraBuffer(dc1394camera_t *camera) {
             break;
         }
     }
+*/
 }
 
 int64_t getTimestampNow()
@@ -653,12 +657,13 @@ bool LoadCalibration(string calibrationDir, OpenCvStereoCalibration *stereoCalib
  */
 void StopCapture(dc1394_t *dcContext, dc1394camera_t *camera)
 {
-
+/*
     dc1394_video_set_transmission(camera, DC1394_OFF);
     dc1394_capture_stop(camera);
     dc1394_camera_free(camera);
 
     dc1394_free (dcContext);
+*/
 }
 
 
@@ -670,7 +675,7 @@ void StopCapture(dc1394_t *dcContext, dc1394camera_t *camera)
 
 
 void InitBrightnessSettings(dc1394camera_t *camera1, dc1394camera_t *camera2, bool enable_gamma) {
-
+/*
     // set absolute control to off
     if (camera1 != NULL) {
         dc1394_feature_set_absolute_control(camera1, DC1394_FEATURE_GAIN, DC1394_OFF);
@@ -727,7 +732,7 @@ void InitBrightnessSettings(dc1394camera_t *camera1, dc1394camera_t *camera2, bo
             dc1394_feature_set_power(camera2, DC1394_FEATURE_GAMMA, DC1394_OFF);
         }
     }
-
+*/
 }
 
 /**
@@ -1017,7 +1022,7 @@ int GetDisparityForDistance(double distance, const OpenCvStereoCalibration &cali
 void MatchBrightnessSettings(dc1394camera_t *camera1, dc1394camera_t *camera2, bool complete_set, int force_brightness, int force_exposure)
 {
 
-
+/*
     #if 0
     dc1394error_t err;
 
@@ -1145,5 +1150,6 @@ void MatchBrightnessSettings(dc1394camera_t *camera1, dc1394camera_t *camera2, b
 
     //std::cout << std::endl << "brightness: " << brightnessVal << std::endl;
     #endif
+*/
 }
 
